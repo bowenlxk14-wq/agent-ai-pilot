@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 16px;
+  color: #0e1b2a;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button {
+  min-height: 44px;
+}
