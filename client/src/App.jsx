@@ -9,6 +9,8 @@ import Metrics from "./pages/Metrics";
 import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import { useContext } from "react";
+import { AppContext } from "./context/AppContext";
 
 const tabs = {
   Dashboard,
@@ -45,7 +47,7 @@ export default function App() {
       <div className="min-h-screen bg-gradient-to-br from-sand-50 via-white to-sea-100">
         <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
         <main className="max-w-6xl mx-auto px-4 py-8">
-          <ActivePage />
+          <AppBody ActivePage={ActivePage} />
         </main>
         <footer className="max-w-6xl mx-auto px-4 pb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-sand-100 px-4 py-2 text-sm text-ink-700">
@@ -56,4 +58,23 @@ export default function App() {
       </div>
     </AppProvider>
   );
+}
+
+function AppBody({ ActivePage }) {
+  const { dataLoading } = useContext(AppContext);
+
+  if (dataLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-10 w-48 bg-sand-100 rounded-xl animate-pulse" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="h-48 bg-white rounded-2xl border border-sand-100 shadow-soft animate-pulse" />
+          <div className="h-48 bg-white rounded-2xl border border-sand-100 shadow-soft animate-pulse" />
+        </div>
+        <div className="h-64 bg-white rounded-2xl border border-sand-100 shadow-soft animate-pulse" />
+      </div>
+    );
+  }
+
+  return <ActivePage />;
 }

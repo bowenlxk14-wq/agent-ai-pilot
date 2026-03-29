@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   setDoc,
   updateDoc,
   query,
@@ -27,6 +28,7 @@ export function AppProvider({ children }) {
   const { user } = useAuth();
   const [tasks, setTasks] = useState(defaultTasks);
   const [leads, setLeads] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [completion, setCompletion] = useState({
     dashboard: 0.4,
     content: 0.2,
@@ -35,45 +37,50 @@ export function AppProvider({ children }) {
     metrics: 0.5
   });
 
-  const loadDailyTasks = async () => {
-    if (!user) return;
-    const date = todayISO();
-    const taskRef = doc(db, "users", user.uid, "dailyTasks", date);
-    const snapshot = await getDoc(taskRef);
-    if (snapshot.exists()) {
-      setTasks(snapshot.data().tasks || defaultTasks);
-    } else {
-      await setDoc(taskRef, { date, tasks: defaultTasks });
-      setTasks(defaultTasks);
-    }
-  };
-
-  const loadLeads = async () => {
-    if (!user) return;
-    const leadsRef = collection(db, "users", user.uid, "leads");
-    const snapshot = await getDocs(leadsRef);
-    if (snapshot.empty) {
-      const seeded = await Promise.all(
-        mockLeads.map((lead) =>
-          addDoc(leadsRef, {
-            ...lead,
-            source: lead.source || "Referral",
-            notes: lead.lastMessage || "",
-            status: lead.status || "active"
-          })
-        )
-      );
-      const seedDocs = await Promise.all(seeded.map((ref) => getDoc(ref)));
-      setLeads(seedDocs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
-    } else {
-      setLeads(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
-    }
-  };
-
   useEffect(() => {
     if (!user) return;
-    loadDailyTasks();
-    loadLeads();
+    setDataLoading(true);
+    const date = todayISO();
+    const taskRef = doc(db, "users", user.uid, "dailyTasks", date);
+    const leadsRef = collection(db, "users", user.uid, "leads");
+
+    const taskUnsub = onSnapshot(taskRef, async (snapshot) => {
+      if (snapshot.exists()) {
+        setTasks(snapshot.data().tasks || defaultTasks);
+      } else {
+        await setDoc(taskRef, { date, tasks: defaultTasks });
+        setTasks(defaultTasks);
+      }
+    });
+
+    const leadsUnsub = onSnapshot(leadsRef, async (snapshot) => {
+      if (snapshot.empty) {
+        const seeded = await Promise.all(
+          mockLeads.map((lead) =>
+            addDoc(leadsRef, {
+              ...lead,
+              source: lead.source || "Referral",
+              notes: lead.lastMessage || "",
+              status: lead.status || "active"
+            })
+          )
+        );
+        const seedDocs = await Promise.all(seeded.map((ref) => getDoc(ref)));
+        setLeads(
+          seedDocs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        );
+      } else {
+        setLeads(
+          snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        );
+      }
+      setDataLoading(false);
+    });
+
+    return () => {
+      taskUnsub();
+      leadsUnsub();
+    };
   }, [user]);
 
   const toggleTask = (taskId) => {
@@ -143,10 +150,11 @@ export function AppProvider({ children }) {
       updateLead,
       recordDailyRate,
       fetchRecentMetrics,
+      dataLoading,
       completion,
       setCompletion
     }),
-    [tasks, leads, completion, user]
+    [tasks, leads, completion, user, dataLoading]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
