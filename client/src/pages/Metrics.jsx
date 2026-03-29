@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -7,23 +7,28 @@ import {
   ResponsiveContainer,
   Tooltip
 } from "recharts";
-
-const loadJson = (key, fallback) => {
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : fallback;
-};
+import { AppContext } from "../context/AppContext";
 
 export default function Metrics() {
-  const leads = loadJson("followUpLeads", []);
-  const dashboardLeads = loadJson("dashboardLeads", []);
-  const dailyRates = loadJson("dailyExecutionRates", []);
+  const { leads, fetchRecentMetrics } = useContext(AppContext);
+  const [dailyRates, setDailyRates] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchRecentMetrics().then((data) => {
+      if (mounted) setDailyRates(data);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [fetchRecentMetrics]);
 
   const metrics = useMemo(() => {
     const totalLeads = leads.length;
-    const leadsNeedingReply = dashboardLeads.filter(
+    const leadsNeedingReply = leads.filter(
       (lead) => lead.status === "awaiting_reply"
     );
-    const repliedLeads = dashboardLeads.filter((lead) => lead.replied);
+    const repliedLeads = leads.filter((lead) => lead.replied);
     const replyRate =
       leadsNeedingReply.length === 0
         ? 0
@@ -45,7 +50,7 @@ export default function Metrics() {
       appointmentsBooked,
       averageRate
     };
-  }, [leads, dashboardLeads, dailyRates]);
+  }, [leads, dailyRates]);
 
   const chartData = dailyRates.map((entry) => ({
     date: entry.date.slice(5),

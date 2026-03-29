@@ -6,6 +6,9 @@ import Content from "./pages/Content";
 import Chat from "./pages/Chat";
 import FollowUp from "./pages/FollowUp";
 import Metrics from "./pages/Metrics";
+import { useAuth } from "./context/AuthContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 const tabs = {
   Dashboard,
@@ -18,6 +21,24 @@ const tabs = {
 export default function App() {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const ActivePage = tabs[activeTab];
+  const { user, loading } = useAuth();
+  const [authView, setAuthView] = useState("login");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-ink-500">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return authView === "login" ? (
+      <Login onSwitch={() => setAuthView("register")} />
+    ) : (
+      <Register onSwitch={() => setAuthView("login")} />
+    );
+  }
 
   return (
     <AppProvider>

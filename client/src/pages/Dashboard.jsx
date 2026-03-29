@@ -2,14 +2,22 @@ import { useContext, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 
 export default function Dashboard() {
-  const { tasks, leads, toggleTask, markReplied, markFollowUpDone } =
+  const {
+    tasks,
+    leads,
+    toggleTask,
+    markReplied,
+    markFollowUpDone,
+    recordDailyRate
+  } =
     useContext(AppContext);
   const today = new Date().toISOString().slice(0, 10);
   const awaitingReplies = leads.filter(
     (lead) => lead.status === "awaiting_reply" && !lead.replied
   );
   const followUpsToday = leads.filter(
-    (lead) => lead.followUpDate === today && !lead.followUpDone
+    (lead) =>
+      (lead.nextFollowUpDate || lead.followUpDate) === today && !lead.followUpDone
   );
 
   const totalTasks =
@@ -25,14 +33,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (totalTasks === 0) return;
-    const stored = localStorage.getItem("dailyExecutionRates");
-    const rates = stored ? JSON.parse(stored) : [];
-    const todayEntry = { date: today, rate };
-    const updated = rates.filter((entry) => entry.date !== today);
-    updated.push(todayEntry);
-    const trimmed = updated.slice(-7);
-    localStorage.setItem("dailyExecutionRates", JSON.stringify(trimmed));
-  }, [rate, today, totalTasks]);
+    recordDailyRate(rate);
+  }, [rate, totalTasks, recordDailyRate]);
 
   return (
     <section className="space-y-8">
@@ -90,7 +92,7 @@ export default function Dashboard() {
             )}
             {awaitingReplies.map((lead) => (
               <div
-                key={lead.name}
+                key={lead.id}
                 className="flex flex-col gap-3 p-4 rounded-xl bg-sand-50"
               >
                 <div>
@@ -99,7 +101,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => markReplied(lead.name)}
+                  onClick={() => markReplied(lead.id)}
                   className="h-11 px-4 rounded-xl bg-ink-900 text-white text-base font-medium"
                 >
                   Mark Replied
@@ -120,7 +122,7 @@ export default function Dashboard() {
             )}
             {followUpsToday.map((lead) => (
               <div
-                key={lead.name}
+                key={lead.id}
                 className="flex flex-col gap-3 p-4 rounded-xl bg-sand-50"
               >
                 <div className="flex items-center justify-between">
@@ -132,7 +134,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => markFollowUpDone(lead.name)}
+                  onClick={() => markFollowUpDone(lead.id)}
                   className="h-11 px-4 rounded-xl bg-ink-900 text-white text-base font-medium"
                 >
                   Mark Done

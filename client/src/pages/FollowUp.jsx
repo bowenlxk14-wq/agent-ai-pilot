@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { mockLeads } from "../data/leads";
+import { useState } from "react";
+import { useContext } from "react";
+import { AppContext } from "../context/AppContext";
 
 const stages = ["Day 1", "Day 3", "Day 7", "Completed"];
 const sources = ["Instagram", "WeChat", "Referral", "Other"];
@@ -11,19 +12,8 @@ const addDays = (dateString, days) => {
   return date.toISOString().slice(0, 10);
 };
 
-  const seedLeads = mockLeads.map((lead) => ({
-    id: `lead-${lead.name.replace(/\s+/g, "-").toLowerCase()}`,
-    name: lead.name,
-    phone: lead.phone || "",
-    source: "Referral",
-    notes: lead.lastMessage || "",
-    stage: lead.followUpStage || "Day 1",
-    nextFollowUpDate: lead.followUpDate || todayISO(),
-    status: lead.status === "closed" ? "Completed" : "Active"
-  }));
-
 export default function FollowUp() {
-  const [leads, setLeads] = useState([]);
+  const { leads, addLead, updateLead } = useContext(AppContext);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -38,21 +28,6 @@ export default function FollowUp() {
     error: ""
   });
 
-  useEffect(() => {
-    const stored = localStorage.getItem("followUpLeads");
-    if (stored) {
-      setLeads(JSON.parse(stored));
-    } else {
-      setLeads(seedLeads);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (leads.length) {
-      localStorage.setItem("followUpLeads", JSON.stringify(leads));
-    }
-  }, [leads]);
-
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -62,55 +37,47 @@ export default function FollowUp() {
     event.preventDefault();
     if (!form.name.trim()) return;
     const newLead = {
-      id: `lead-${Date.now()}`,
       name: form.name.trim(),
       phone: form.phone.trim(),
       source: form.source,
       notes: form.notes.trim(),
+      lastMessage: form.notes.trim(),
+      replied: false,
+      followUpDone: false,
       stage: "Day 1",
+      followUpStage: "Day 1",
       nextFollowUpDate: todayISO(),
       status: "Active"
     };
-    setLeads((prev) => [newLead, ...prev]);
+    addLead(newLead);
     setForm({ name: "", phone: "", source: sources[0], notes: "" });
   };
 
   const advanceStage = (leadId) => {
-    setLeads((prev) =>
-      prev.map((lead) => {
-        if (lead.id !== leadId) return lead;
-        const currentIndex = stages.indexOf(lead.stage);
-        const nextStage = stages[Math.min(currentIndex + 1, stages.length - 1)];
-        const nextDate =
-          nextStage === "Day 3"
-            ? addDays(todayISO(), 2)
-            : nextStage === "Day 7"
-              ? addDays(todayISO(), 4)
-              : "-";
-        return {
-          ...lead,
-          stage: nextStage,
-          nextFollowUpDate: nextDate,
-          status: nextStage === "Completed" ? "Completed" : lead.status
-        };
-      })
-    );
+    const lead = leads.find((item) => item.id === leadId);
+    if (!lead) return;
+    const currentIndex = stages.indexOf(lead.stage);
+    const nextStage = stages[Math.min(currentIndex + 1, stages.length - 1)];
+    const nextDate =
+      nextStage === "Day 3"
+        ? addDays(todayISO(), 2)
+        : nextStage === "Day 7"
+          ? addDays(todayISO(), 4)
+          : "-";
+    updateLead(leadId, {
+      stage: nextStage,
+      followUpStage: nextStage,
+      nextFollowUpDate: nextDate,
+      status: nextStage === "Completed" ? "Completed" : lead.status
+    });
   };
 
   const pauseLead = (leadId) => {
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === leadId ? { ...lead, status: "Paused" } : lead
-      )
-    );
+    updateLead(leadId, { status: "Paused" });
   };
 
   const markAppointmentBooked = (leadId) => {
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === leadId ? { ...lead, status: "Appointment Booked" } : lead
-      )
-    );
+    updateLead(leadId, { status: "Appointment Booked" });
   };
 
   const openSuggestedMessage = async (lead) => {
@@ -143,7 +110,7 @@ export default function FollowUp() {
     setModal({ open: false, loading: false, message: "", lead: null, error: "" });
   };
 
-  const activeLeads = useMemo(() => leads, [leads]);
+  const activeLeads = leads;
 
   return (
     <section className="space-y-8">
