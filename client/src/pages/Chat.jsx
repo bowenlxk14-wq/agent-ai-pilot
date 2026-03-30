@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import apiBase from "../apiBase";
+
 export default function Chat() {
   const [clientMessage, setClientMessage] = useState("");
   const [mode, setMode] = useState("trust");
@@ -15,7 +17,7 @@ export default function Chat() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:3001/api/chat/reply", {
+      const response = await fetch(`${apiBase}/api/chat/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientMessage, mode })

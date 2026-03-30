@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import apiBase from "../apiBase";
+
 const audienceOptions = [
   "New immigrant families",
   "Financially anxious middle class",
@@ -18,7 +20,7 @@ export default function Content() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:3001/api/content/generate", {
+      const response = await fetch(`${apiBase}/api/content/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetAudience })

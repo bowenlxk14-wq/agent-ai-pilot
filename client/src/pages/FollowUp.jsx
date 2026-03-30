@@ -5,6 +5,7 @@ import { AppContext } from "../context/AppContext";
 const stages = ["Day 1", "Day 3", "Day 7", "Completed"];
 const sources = ["Instagram", "WeChat", "Referral", "Other"];
 
+import apiBase from "../apiBase";
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const addDays = (dateString, days) => {
   const date = new Date(dateString);
@@ -83,7 +84,7 @@ export default function FollowUp() {
   const openSuggestedMessage = async (lead) => {
     setModal({ open: true, loading: true, message: "", lead, error: "" });
     try {
-      const response = await fetch("http://localhost:3001/api/tracker/suggest", {
+      const response = await fetch(`${apiBase}/api/tracker/suggest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadName: lead.name, stage: lead.stage })
